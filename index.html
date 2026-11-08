@@ -3,232 +3,748 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>[Your Clinic Name] Rx | Secure</title>
+    <title>Demo - Clinical Certificate & Report Generator</title>
     <meta name="robots" content="noindex, nofollow">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@400;600;700;800&family=Playfair+Display:ital,wght@1,600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
-        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'], heading: ['Manrope', 'sans-serif'], serif: ['Playfair Display', 'serif'] }, colors: { brand: { navy: '#0f172a', blue: '#0284c7', slate: '#475569' } } } } }
+        tailwind.config = { 
+            theme: { 
+                extend: { 
+                    fontFamily: { 
+                        sans: ['"Times New Roman"', 'Times', 'serif'], 
+                        serif: ['"Times New Roman"', 'Times', 'serif'] 
+                    }, 
+                    colors: { 
+                        brand: { 
+                            navy: '#0b162c', 
+                            teal: '#0d9488', 
+                            blue: '#1d4ed8',
+                            slate: '#334155',
+                            muted: '#64748b',
+                            light: '#f8fafc'
+                        } 
+                    } 
+                } 
+            } 
+        }
     </script>
     <style>
-        body { background-color: #f8fafc; overflow-x: hidden; }
-        .a4-print { width: 210mm; min-height: 297mm; background: white; margin: 0 auto; }
-        @media print { .no-print { display: none !important; } }
-        #qrcode img { display: block; margin: 0 auto; }
+        body, input, textarea, select, button { 
+            font-family: 'Times New Roman', Times, serif !important; 
+            background-color: #cbd5e1; 
+            overflow-x: hidden; 
+        }
+        .a4-print { 
+            font-family: 'Times New Roman', Times, serif !important;
+            width: 210mm; 
+            min-height: 297mm; 
+            background: white; 
+            margin: 0 auto; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15); 
+        }
+        .report-section { position: relative; }
+        .report-section::before { content: ''; position: absolute; left: 0; top: 2px; bottom: 2px; width: 3.5px; background-color: #0d9488; border-radius: 4px; }
+        .rich-text strong { font-weight: 700; color: #0b162c; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        @media print { .no-print { display: none !important; } .a4-print{ box-shadow: none; } }
     </style>
 </head>
-<body class="text-brand-slate">
+<body class="text-brand-slate font-sans antialiased">
 
-    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-slate-100 px-4 fixed inset-0 z-50">
-        <div class="bg-white p-8 rounded-3xl shadow-xl w-full max-w-md border border-slate-200">
-            <h1 class="text-2xl font-bold text-center text-brand-navy mb-8">[Your Clinic Name] Access</h1>
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-slate-200 px-4 fixed inset-0 z-50">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-brand-teal"></div>
+            <h1 class="text-2xl font-bold text-center text-brand-navy mb-2 font-serif">Clinic Portal</h1>
+            <p class="text-center text-sm text-brand-muted mb-8">Software Demo Portal</p>
             <form id="login-form" class="space-y-6">
-                <input type="password" id="pin-input" class="w-full px-4 py-4 rounded-xl border text-center text-2xl font-bold tracking-[0.5em]" placeholder="••••" required autofocus>
-                <button type="submit" class="w-full bg-brand-blue text-white font-bold py-4 rounded-xl">Unlock Portal</button>
+                <input type="password" id="pin-input" class="w-full px-4 py-4 rounded-xl border-2 border-slate-200 focus:border-brand-teal outline-none text-center text-3xl font-bold tracking-[0.5em] transition-all" placeholder="••••" required autofocus>
+                <button type="submit" class="w-full bg-brand-navy text-white font-bold py-4 rounded-xl hover:bg-brand-teal transition-colors shadow-lg">Enter Demo</button>
             </form>
         </div>
     </div>
 
-    <div id="app-screen" class="min-h-screen bg-slate-100 p-2 lg:p-8 hidden">
-        <div class="max-w-[1600px] mx-auto grid lg:grid-cols-12 gap-4 lg:gap-8 items-start">
+    <!-- Application Main Screen -->
+    <div id="app-screen" class="min-h-screen p-2 lg:p-6 hidden">
+        <div class="max-w-[1650px] mx-auto grid lg:grid-cols-12 gap-6 items-start">
             
-            <div class="w-full lg:col-span-4 bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-slate-200 lg:sticky lg:top-8 no-print z-10">
-                <h2 class="text-xl font-bold mb-6">Rx Details</h2>
-                <div class="space-y-4">
-                    <input type="text" id="in-name" placeholder="Patient Name" class="w-full p-3 rounded-xl border bg-slate-50">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="in-age" placeholder="Age" class="w-full p-3 rounded-xl border bg-slate-50">
-                        <select id="in-sex" class="w-full p-3 rounded-xl border bg-slate-50">
-                            <option value="">Sex</option><option value="Male">Male</option><option value="Female">Female</option>
+            <!-- Left Controls Form -->
+            <div class="w-full lg:col-span-4 bg-white p-5 lg:p-6 rounded-3xl shadow-xl border border-slate-200 lg:sticky lg:top-6 no-print z-10 max-h-[92vh] overflow-y-auto custom-scrollbar">
+                <div class="flex items-center gap-3 mb-5 border-b pb-4">
+                    <div class="h-10 w-10 bg-brand-light rounded-full flex items-center justify-center text-brand-teal shrink-0 shadow-sm">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-brand-navy font-serif leading-tight">Clinical Editor Demo</h2>
+                        <p class="text-xs text-brand-muted">Fully customizable for your specialty</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4 text-xs">
+                    
+                    <!-- Save / Load Session Data Controls -->
+                    <div class="bg-brand-light p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                        <label class="block font-bold text-brand-navy text-[11px] uppercase tracking-wider">Session Data Management</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="saveSessionData()" class="bg-brand-teal text-white font-bold py-2 px-3 rounded-xl hover:bg-teal-700 transition-colors shadow-sm flex items-center justify-center gap-1.5 text-xs">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                                Save Session
+                            </button>
+                            <label class="bg-brand-navy text-white font-bold py-2 px-3 rounded-xl hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-1.5 text-xs cursor-pointer">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                Load Session
+                                <input type="file" id="load-file-input" accept=".json" class="hidden" onchange="loadSessionData(event)">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Image Uploads -->
+                    <div class="grid grid-cols-1 gap-3 mb-2">
+                        <div class="bg-teal-50/60 p-3 rounded-xl border border-teal-100/80">
+                            <label class="block font-bold text-[11px] uppercase tracking-wider text-brand-teal mb-1.5">Upload Digital Signature</label>
+                            <input type="file" id="in-signature-image" accept="image/*" class="w-full text-[10px] text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-xl file:border-0 file:text-[10px] file:font-bold file:bg-brand-navy file:text-white hover:file:bg-brand-teal cursor-pointer transition-colors">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-600 mb-1">Assessment Date</label>
+                            <input type="date" id="in-assessment-date" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-600 mb-1">Date of Birth / Age</label>
+                            <input type="text" id="in-dob" placeholder="e.g. 24-05-1990 or 34 Yrs" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Patient Full Name</label>
+                        <input type="text" id="in-name" placeholder="e.g. John Doe" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all font-medium">
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="col-span-1">
+                            <label class="block font-semibold text-slate-600 mb-1">Gender</label>
+                            <select id="in-gender" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all">
+                                <option value="">Select</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <label class="block font-semibold text-slate-600 mb-1">Address & Phone</label>
+                            <input type="text" id="in-address" placeholder="City, State & Phone Number" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all">
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Medication Adder -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                        <h3 class="font-bold text-brand-navy text-[12px] uppercase tracking-wider border-b border-slate-200 pb-2">Prescription Builder</h3>
+                        
+                        <div>
+                            <label class="block font-semibold text-slate-600 mb-1">Search Medicine</label>
+                            <input list="medicine-options" id="med-name" placeholder="Start typing a medicine (Brand or Generic)..." class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all font-medium bg-white">
+                            <datalist id="medicine-options">
+                                <!-- Populated dynamically by JS -->
+                            </datalist>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Dose</label>
+                                <input type="text" id="med-dose" placeholder="e.g. 500mg, 10ml" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all bg-white">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-600 mb-1">Frequency</label>
+                                <input list="freq-options" id="med-freq" placeholder="Select or type..." class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all bg-white">
+                                <datalist id="freq-options">
+                                    <option value="(1-0-0) Morning">
+                                    <option value="(0-1-0) Afternoon">
+                                    <option value="(0-0-1) Night">
+                                    <option value="(0-0-1/2) Half at night">
+                                    <option value="(1-0-1) Morning & Night">
+                                    <option value="(1-1-0) Morning & Afternoon">
+                                    <option value="(1-1-1) Thrice a day">
+                                    <option value="(0-0-2) Two at night">
+                                    <option value="(2-0-0) Two in morning">
+                                    <option value="(1/2-0-0) Half morning">
+                                    <option value="SOS (As needed)">
+                                </datalist>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="addMedication()" class="w-full bg-brand-navy text-white font-bold py-2.5 rounded-xl hover:bg-slate-800 transition-colors shadow-sm flex items-center justify-center gap-1.5 mt-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Add to Prescription
+                        </button>
+
+                        <div id="medication-list" class="space-y-2 mt-3 empty:hidden"></div>
+
+                        <!-- Follow up selector with Data Attributes for Auto-Date Calculation -->
+                        <div class="pt-3 mt-2 border-t border-slate-200">
+                            <label class="block font-semibold text-slate-600 mb-1">Review / Follow-up After</label>
+                            <select id="in-followup" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all bg-white font-medium" onchange="updatePreview()">
+                                <option value="" data-days="0" data-months="0">No Follow-up selected</option>
+                                <option value="Review after 3 Days" data-days="3" data-months="0">3 Days</option>
+                                <option value="Review after 7 Days" data-days="7" data-months="0">7 Days</option>
+                                <option value="Review after 1 Week" data-days="7" data-months="0">1 Week</option>
+                                <option value="Review after 2 Weeks" data-days="14" data-months="0">2 Weeks</option>
+                                <option value="Review after 3 Weeks" data-days="21" data-months="0">3 Weeks</option>
+                                <option value="Review after 1 Month" data-days="0" data-months="1">1 Month</option>
+                                <option value="Review after 2 Months" data-days="0" data-months="2">2 Months</option>
+                                <option value="Review after 3 Months" data-days="0" data-months="3">3 Months</option>
+                                <option value="Review SOS / When Required" data-days="0" data-months="0">SOS / When Required</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200/60 text-[11px] text-slate-500 flex justify-between items-center">
+                        <div>
+                            <span class="font-bold text-brand-teal">Formatting Tip:</span> Use double asterisks for bolding (e.g. <code class="bg-white px-1 py-0.5 rounded border border-slate-200 font-mono text-brand-navy">**severe headaches**</code>).
+                        </div>
+                    </div>
+
+                    <!-- FONT SIZE SETTING -->
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Report Font Size</label>
+                        <select id="in-font-size" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all font-medium bg-white" onchange="updatePreview()">
+                            <option value="11px">Small (11px)</option>
+                            <option value="12.5px" selected>Normal (12.5px)</option>
+                            <option value="14px">Large (14px)</option>
+                            <option value="15.5px">Extra Large (15.5px)</option>
                         </select>
                     </div>
-                    <textarea id="in-complaints" placeholder="Complaints" class="w-full p-3 rounded-xl border bg-slate-50"></textarea>
-                    <input type="text" id="in-diagnosis" placeholder="Diagnosis" class="w-full p-3 rounded-xl border bg-slate-50">
-                    <textarea id="in-medicines" placeholder="Medicines (Rx)" rows="6" class="w-full p-3 rounded-xl border bg-blue-50"></textarea>
-                    <textarea id="in-advice" placeholder="Advice" class="w-full p-3 rounded-xl border bg-slate-50"></textarea>
-                    <button id="export-btn" onclick="generateImage()" class="w-full bg-brand-blue text-white font-bold py-4 rounded-xl">Export High-Quality Image</button>
+
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Symptoms</label>
+                        <textarea id="in-symptoms" placeholder="Enter patient symptoms..." rows="2" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all resize-y text-xs leading-relaxed"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Clinical Evaluation</label>
+                        <textarea id="in-evaluation" placeholder="Enter detailed clinical evaluation..." rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all resize-y text-xs leading-relaxed"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Background and History</label>
+                        <textarea id="in-history" placeholder="Enter occupational/medical history..." rows="3" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all resize-y text-xs leading-relaxed"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Diagnosis</label>
+                        <input type="text" id="in-diagnosis" placeholder="Primary Diagnosis" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all font-semibold uppercase">
+                    </div>
+
+                    <div>
+                        <label class="block font-bold text-brand-navy mb-1">Treatment and Management</label>
+                        <textarea id="in-treatment" placeholder="Advised medications, follow-up, and plan will appear here..." rows="6" class="w-full p-2.5 rounded-xl border border-slate-200 focus:border-brand-teal outline-none transition-all resize-y text-xs leading-relaxed"></textarea>
+                    </div>
+
+                    <button id="export-btn" onclick="generatePDF()" class="w-full bg-brand-teal text-white font-bold py-3.5 rounded-xl mt-4 hover:bg-teal-700 transition-colors shadow-lg flex items-center justify-center gap-2 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Demo PDF
+                    </button>
                 </div>
             </div>
 
-            <div class="w-full lg:col-span-8 flex justify-center pb-10 overflow-x-auto sm:overflow-visible relative">
-                
-                <div class="h-[550px] sm:h-[750px] lg:h-auto w-full flex justify-center">
+            <!-- Preview Panel -->
+            <div class="w-full lg:col-span-8 flex justify-center pb-12 overflow-x-auto sm:overflow-visible relative">
+                <div class="h-[650px] sm:h-[850px] lg:h-auto w-full flex justify-center">
                     
-                    <div id="prescription-preview" class="a4-print flex flex-col relative bg-white overflow-hidden text-brand-slate font-sans shrink-0 w-[794px] min-w-[794px] min-h-[1123px] scale-[0.45] sm:scale-[0.65] lg:scale-100 origin-top shadow-sm lg:shadow-xl">
+                    <div id="prescription-preview" class="a4-print flex flex-col relative bg-white overflow-hidden text-brand-navy shrink-0 w-[794px] min-w-[794px] min-h-[1123px] scale-[0.48] sm:scale-[0.7] lg:scale-100 origin-top">
                         
-                        <div class="px-10 pt-12 pb-6 border-b-2 border-brand-blue flex justify-between items-end">
+                        <!-- Top Accent Bar -->
+                        <div class="h-2 w-full bg-brand-teal"></div>
+
+                        <!-- Header Section -->
+                        <div class="px-10 pt-5 pb-2 flex justify-between items-center bg-white">
+                            <!-- Left: Doctor Info -->
                             <div>
-                                <h1 class="text-3xl font-extrabold text-brand-navy whitespace-nowrap">[Your Name]</h1>
-                                <p class="text-brand-blue font-bold text-lg whitespace-nowrap">[Your Specialization]</p>
-                                <p class="text-slate-500 text-sm whitespace-nowrap">[Your Qualifications]</p>
+                                <h1 class="text-2xl font-extrabold text-brand-navy font-serif tracking-tight mb-0.5">Dr. Your Name</h1>
+                                <p class="text-brand-teal font-bold text-[13px] tracking-wider uppercase mb-0.5">Consultant Specialist</p>
+                                <p class="text-slate-500 text-[12px] font-medium">Your Degrees (e.g. MBBS, MD)</p>
                             </div>
-                            <div class="text-right">
-                                <div class="w-16 h-16 ml-auto mb-3 bg-brand-blue rounded-full flex items-center justify-center text-white shadow-md">
-                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            
+                            <!-- Right: Clinic Branding -->
+                            <div class="flex items-center gap-3 text-right">
+                                <div class="flex flex-col items-end">
+                                    <h2 class="text-2xl font-black text-brand-navy tracking-tight font-serif mb-0">YOUR CLINIC NAME</h2>
+                                    <p class="text-brand-teal text-[10px] font-bold tracking-[0.25em] uppercase">Multi-Specialty Center</p>
                                 </div>
-                                <p class="text-brand-navy text-sm font-bold whitespace-nowrap">[Your Clinic Name]</p>
                             </div>
                         </div>
                         
-                        <div class="px-10 py-3 bg-slate-50 border-b border-slate-200 flex justify-between items-center text-sm">
-                            <div class="flex gap-8">
-                                <p><span class="text-slate-400 font-bold uppercase text-xs tracking-wider mr-1">Name:</span> <span id="out-name" class="font-bold text-brand-navy">__________________</span></p>
-                                <p><span class="text-slate-400 font-bold uppercase text-xs tracking-wider mr-1">Age/Sex:</span> <span id="out-agesex" class="font-bold text-brand-navy">___ / ___</span></p>
-                            </div>
-                            <p><span class="text-slate-400 font-bold uppercase text-xs tracking-wider mr-1">Date:</span> <span id="out-date" class="font-bold text-brand-navy"></span></p>
+                        <div class="px-10 mb-2">
+                            <div class="w-full border-t border-slate-200"></div>
                         </div>
 
-                        <div class="px-10 py-8 flex-1 flex flex-col">
+                        <!-- Patient Information Block -->
+                        <div class="px-10 my-1.5">
+                            <div class="bg-slate-50/70 border border-slate-200/70 rounded-lg px-4 py-2 text-[12.5px] leading-snug">
+                                <div class="grid grid-cols-12 gap-y-1 gap-x-4">
+                                    <div class="col-span-6 flex items-baseline">
+                                        <span class="text-slate-500 font-semibold w-36 shrink-0">Date of Assessment</span>
+                                        <span class="text-slate-400 mr-2">:</span>
+                                        <span id="out-assessment-date" class="font-bold text-brand-navy flex-1"></span>
+                                    </div>
+                                    <div class="col-span-6 flex items-baseline">
+                                        <span class="text-slate-500 font-semibold w-28 shrink-0">Patient name</span>
+                                        <span class="text-slate-400 mr-2">:</span>
+                                        <span id="out-name" class="font-bold text-brand-navy flex-1"></span>
+                                    </div>
+                                    <div class="col-span-6 flex items-baseline">
+                                        <span class="text-slate-500 font-semibold w-36 shrink-0">Gender</span>
+                                        <span class="text-slate-400 mr-2">:</span>
+                                        <span id="out-gender" class="font-semibold text-brand-navy flex-1"></span>
+                                    </div>
+                                    <div class="col-span-6 flex items-baseline">
+                                        <span class="text-slate-500 font-semibold w-28 shrink-0">DOB / Age</span>
+                                        <span class="text-slate-400 mr-2">:</span>
+                                        <span id="out-dob" class="font-semibold text-brand-navy flex-1"></span>
+                                    </div>
+                                    <div class="col-span-12 flex items-baseline border-t border-slate-200/50 pt-1.5 mt-0.5">
+                                        <span class="text-slate-500 font-semibold w-36 shrink-0">Address & Contact</span>
+                                        <span class="text-slate-400 mr-2">:</span>
+                                        <span id="out-address" class="font-medium text-brand-navy flex-1"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Clinical Content Area -->
+                        <div class="px-10 flex-1 flex flex-col space-y-2.5 my-1.5">
                             
-                            <div id="clinical-container" class="grid grid-cols-2 gap-8 pb-6 border-b border-slate-100 mb-6 hidden">
-                                <div id="complaints-container" class="hidden">
-                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Chief Complaints</h3>
-                                    <p id="out-complaints" class="text-sm font-medium text-brand-navy whitespace-pre-wrap"></p>
-                                </div>
-                                <div id="diagnosis-container" class="hidden">
-                                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Diagnosis</h3>
-                                    <p id="out-diagnosis" class="text-sm font-bold text-brand-blue uppercase whitespace-pre-wrap"></p>
-                                </div>
+                            <!-- Symptoms -->
+                            <div id="symptoms-container" class="hidden report-section pl-3.5">
+                                <h3 class="text-[12.5px] font-bold text-brand-navy uppercase tracking-wider mb-0.5">Symptoms:</h3>
+                                <div id="out-symptoms" class="rich-text leading-[1.55] text-slate-800 text-justify" style="font-size: 12.5px;"></div>
                             </div>
 
-                            <div class="flex-1">
-                                <div class="text-4xl font-heading text-brand-blue mb-4">℞</div>
-                                <p id="out-medicines" class="text-base font-medium text-brand-navy whitespace-pre-wrap leading-loose px-4"></p>
+                            <!-- Clinical Evaluation -->
+                            <div id="evaluation-container" class="hidden report-section pl-3.5">
+                                <h3 class="text-[12.5px] font-bold text-brand-navy uppercase tracking-wider mb-0.5">Clinical Evaluation:</h3>
+                                <div id="out-evaluation" class="rich-text leading-[1.55] text-slate-800 text-justify" style="font-size: 12.5px;"></div>
                             </div>
 
-                            <div id="advice-container" class="mt-8 hidden">
-                                <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 border-b pb-1">Advice & Instructions</h3>
-                                <p id="out-advice" class="text-sm font-medium text-brand-navy whitespace-pre-wrap leading-relaxed"></p>
+                            <!-- Background & History -->
+                            <div id="history-container" class="hidden report-section pl-3.5">
+                                <h3 class="text-[12.5px] font-bold text-brand-navy uppercase tracking-wider mb-0.5">Background and History:</h3>
+                                <div id="out-history" class="rich-text leading-[1.55] text-slate-800 text-justify" style="font-size: 12.5px;"></div>
+                            </div>
+
+                            <!-- Diagnosis -->
+                            <div id="diagnosis-container" class="hidden report-section pl-3.5">
+                                <h3 class="text-[12.5px] font-bold text-brand-navy uppercase tracking-wider mb-0.5">Diagnosis:</h3>
+                                <div id="out-diagnosis" class="rich-text font-bold text-brand-navy leading-[1.4] uppercase" style="font-size: 12.5px;"></div>
+                            </div>
+
+                            <!-- Treatment & Management -->
+                            <div id="treatment-container" class="hidden report-section pl-3.5">
+                                <h3 class="text-[12.5px] font-bold text-brand-navy uppercase tracking-wider mb-0.5">Treatment and Management:</h3>
+                                <div id="out-treatment" class="rich-text leading-[1.55] text-slate-800 text-justify" style="font-size: 12.5px;"></div>
+                                <div id="out-followup" class="font-bold text-brand-navy mt-3" style="font-size: 12.5px; display: none;"></div>
+                            </div>
+
+                        </div>
+
+                        <!-- Footer Section -->
+                        <div class="mt-auto bg-white pt-1.5 pb-3 px-10 border-t border-slate-200">
+                            <div class="flex justify-between items-end">
+                                
+                                <!-- Left: Contact Details -->
+                                <div class="w-7/12 space-y-1 text-[11px] text-slate-600 mb-0.5">
+                                    <div class="flex items-center font-medium">
+                                        <svg class="w-3.5 h-3.5 mr-2 text-brand-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                        <span>Your Clinic Address, City, State - 123456</span>
+                                    </div>
+                                    <div class="flex items-center font-medium">
+                                        <svg class="w-3.5 h-3.5 mr-2 text-brand-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                                        <span>+91 98765 43210</span>
+                                    </div>
+                                    <div class="flex items-center font-medium">
+                                        <svg class="w-3.5 h-3.5 mr-2 text-brand-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                                        <span>contact@yourclinic.com</span>
+                                    </div>
+                                    <div class="flex items-center font-medium">
+                                        <svg class="w-3.5 h-3.5 mr-2 text-brand-teal shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                                        <span>www.yourwebsite.com</span>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Dynamic Seal & Signature Block -->
+                                <div class="w-5/12 flex flex-col items-center justify-end relative text-center">
+                                    <div class="h-28 w-full flex justify-center items-center relative z-10 -mb-2">
+                                        <!-- Hardcoded Seal layer -->
+                                        <img id="out-seal-img" src="seal.png" class="absolute max-h-[160px] max-w-[210px] w-auto object-contain opacity-85" alt="Official Seal" style="display: none;">
+                                        <!-- Signature layer -->
+                                        <img id="out-signature-img" src="" class="absolute max-h-[110px] max-w-[240px] w-auto object-contain z-10" alt="Signature" style="display: none;">
+                                    </div>
+                                    <div class="border-t border-slate-300 w-56 pt-1 mt-1">
+                                        <p class="font-bold text-xs text-brand-navy">Dr. Your Name</p>
+                                        <p class="text-[10px] text-slate-500 font-sans">Consultant Specialist</p>
+                                    </div>
+                                </div>
+                                
                             </div>
                         </div>
 
-                        <div class="px-10 pb-10 pt-4 flex justify-between items-end mt-auto">
-                            <div class="w-1/3 flex flex-col justify-end">
-                                <div class="flex items-center gap-3 mb-4">
-                                    <div id="qrcode" class="border border-slate-200 p-1.5 rounded-lg bg-white"></div>
-                                    <div class="text-[8px] text-slate-400 font-bold uppercase tracking-widest leading-tight">
-                                        Scan to<br>Verify<br>Authenticity
-                                    </div>
-                                </div>
-                                <p class="text-xs text-slate-500 leading-relaxed font-medium">
-                                    <strong>[Your Clinic Name]</strong><br>
-                                    [Your Address/Location]<br>
-                                    Ph: [Your Phone Number]
-                                </p>
-                            </div>
-                            <div class="text-center w-1/3 relative flex flex-col items-center">
-                                <div class="absolute -left-6 -top-6 w-24 h-24 rounded-full border-[3px] border-blue-900/10 flex items-center justify-center -rotate-12 select-none">
-                                    <div class="w-20 h-20 rounded-full border border-blue-900/10 flex items-center justify-center">
-                                        <p class="text-[8px] font-bold text-blue-900/20 uppercase tracking-widest leading-tight text-center">[Clinic<br>Seal<br>Here]</p>
-                                    </div>
-                                </div>
-                                <div class="h-16 w-full flex items-end justify-center pb-1">
-                                    <span class="font-serif italic text-3xl text-brand-blue opacity-80 select-none">[Your Signature]</span>
-                                </div>
-                                <div class="w-48 border-t border-slate-300 mx-auto mt-1"></div>
-                                <p class="font-bold text-sm mt-1 text-brand-navy whitespace-nowrap">[Your Name]</p>
-                                <p class="text-[10px] font-bold text-slate-400 mt-0.5 tracking-wider whitespace-nowrap">REG NO: [Your Reg Number]</p>
-                            </div>
-                        </div>
-                        <div class="h-3 w-full bg-brand-blue absolute bottom-0 left-0"></div>
+                        <!-- Bottom Accent Bar -->
+                        <div class="h-2 w-full bg-brand-navy"></div>
                     </div>
                 </div>
             </div>
+            
         </div>
     </div>
 
+    <!-- Script Section -->
     <script>
-        const currentDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-        document.getElementById('out-date').innerText = currentDate;
+        // Massive representative cross-specialty medical database, strictly expanded for Psychiatry + General Indian Brands
+        const medicineDatabase = [
+            // Psychotropics - Generics
+            "Alprazolam", "Amisulpride", "Amitriptyline", "Aripiprazole", "Armodafinil", "Atomoxetine", "Baclofen", "Blonanserin", "Brexpiprazole", "Brivaracetam", "Bupropion", "Buspirone", 
+            "Carbamazepine", "Cariprazine", "Chlordiazepoxide", "Chlorpromazine", "Citalopram", "Clobazam", "Clomipramine", "Clonazepam", "Clonidine", "Clozapine", 
+            "Desvenlafaxine", "Dexmethylphenidate", "Diazepam", "Divalproex", "Donepezil", "Dothiepin", "Duloxetine", "Escitalopram", "Eszopiclone", "Ethosuximide", "Etizolam", 
+            "Flupentixol", "Fluoxetine", "Fluvoxamine", "Gabapentin", "Galantamine", "Haloperidol", "Hydroxyzine", "Iloperidone", "Imipramine", "Ketamine", "Lamotrigine", "Levetiracetam", "Levomilnacipran", 
+            "Lisdexamfetamine", "Lithium", "Lorazepam", "Lurasidone", "Melatonin", "Memantine", "Methylphenidate", "Milnacipran", "Mirtazapine", "Modafinil", 
+            "Naltrexone", "Nitrazepam", "Nortriptyline", "Olanzapine", "Oxcarbazepine", "Paliperidone", "Paroxetine", "Phenytoin", "Pimozide", "Pregabalin", "Procyclidine", "Promethazine", "Propranolol", 
+            "Quetiapine", "Ramelteon", "Risperidone", "Rivastigmine", "Selegiline", "Sertraline", "Sodium Valproate", "Sulpiride", "Tetrabenazine", "Topiramate", "Trazodone", "Trifluoperazine", "Trihexyphenidyl", "Valproic Acid", "Venlafaxine", "Vilazodone", "Vortioxetine", "Ziprasidone", "Zolpidem", "Zonisamide", "Zopiclone", "Zuclopenthixol",
+            
+            // Psychotropics - Common Indian Brands
+            "Admenta", "Alprax", "Amisant", "Anafranil", "Antidep", "Arip MT", "Asprito", "Ativan", "Attentrol", "Brintellix", "Bupron", "Calmpose", "Ciplar", "Cita", "Clonotril", "D-Veniz", "Daxid", "Desval ER", "Donep", "Duzela", "Eliwel", "Encorate", "Epilex", "Etilaam", "Etizola", "Excellon", "Fluanxol", "Fludac", "Fluvoxin", "Ilosure", "Inspiral", "Lamez", "Lamitor", "Largactil", "Levipil", "Librium", "Licab", "Lithosun", "Lonazep", "Lopez", "Lozapin", "Lurafic", "Mazetol", "Mdet", "Meloset", "Mirazep", "Mirtaz", "Modalert", "Neocalm", "Nexito", "Nexito Plus", "Nitrest", "Olanex", "Oleanz", "Oleptal", "Oxetol", "Pacitane", "Palido", "Pari", "Parkin", "Petril Beta", "Phenergan", "Prodep", "Prothiaden", "Qutan", "Restyl", "Rexipra", "Rispond", "Rivamer", "Sensival", "Serenace", "Seroquel", "Sizodon", "Sizopin", "Sulpitac", "Symbal", "Tegretol", "Topamac", "Trazalon", "Tryptomer", "Valium", "Valparin", "Veniz", "Venlor", "Viibryd", "Xet", "Zapiz", "Zipsydon", "Zolfresh", "Zosert",
+            
+            // General / Internal Medicine - Generics
+            "Aceclofenac", "Amlodipine", "Amoxicillin", "Aspirin", "Atenolol", "Atorvastatin", "Azithromycin", "Budesonide", "Calcium Carbonate", "Cefixime", "Ceftriaxone", "Cetirizine", "Ciprofloxacin", "Clopidogrel", "Dapagliflozin", "Dexamethasone", "Diclofenac", "Domperidone", "Doxycycline", "Esomeprazole", "Etoricoxib", "Fluconazole", "Formoterol", "Glimepiride", "Ibuprofen", "Insulin Glargine", "Levocetirizine", "Levothyroxine", "Lisinopril", "Losartan", "Metformin", "Methylcobalamin", "Metoprolol", "Metronidazole", "Montelukast", "Naproxen", "Oflocaxin", "Omeprazole", "Ondansetron", "Pantoprazole", "Paracetamol", "Rabeprazole", "Rosuvastatin", "Salbutamol", "Sitagliptin", "Tamsulosin", "Telmisartan", "Teneligliptin", "Tramadol", "Vitamin D3",
+            
+            // General / Internal Medicine - Common Indian Brands
+            "Amaryl", "Amlong", "Asthalin", "Augmentin", "Azee", "Brufen", "Calpol", "Cetzine", "Ciplox", "Clavam", "Crocin", "Dolo", "Doxyt", "Emeset", "Forxiga", "Glycomet", "Januvia", "Levocet", "Lipikind", "Monocef", "Montair", "Mox", "Omez", "Pan", "Pan-D", "Pantocid", "Rabicip D", "Rablet", "Repace", "Rosuvas", "Telmikind", "Thyronorm", "Ultracet", "Voveran", "Zenflox", "Zerodol", "Zerodol-SP", "Zifi", "Zita Plus", "Zocon"
+        ].sort();
 
-        const qrCode = new QRCode(document.getElementById("qrcode"), {
-            text: `[Your Clinic Name] Verified Rx\n[Your Name]\nDate: ${currentDate}`,
-            width: 56,
-            height: 56,
-            colorDark : "#0f172a",
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.L
+        // Populate Datalist on Load
+        const datalist = document.getElementById('medicine-options');
+        medicineDatabase.forEach(med => {
+            const option = document.createElement('option');
+            option.value = med;
+            datalist.appendChild(option);
         });
 
-        function updateQRCode() {
-            const ptName = document.getElementById('in-name').value.trim() || 'Patient';
-            const verifyText = `Verified Rx\n[Your Name]\nPatient: ${ptName}\nDate: ${currentDate}`;
-            qrCode.clear();
-            qrCode.makeCode(verifyText);
+        // Dynamic Prescription Builder State
+        let prescribedMeds = [];
+
+        function addMedication() {
+            const name = document.getElementById('med-name').value.trim();
+            const dose = document.getElementById('med-dose').value.trim();
+            const freq = document.getElementById('med-freq').value.trim();
+
+            if(!name) return alert("Please enter a medicine name.");
+
+            prescribedMeds.push({ name, dose, freq });
+            
+            // Clear inputs for next med
+            document.getElementById('med-name').value = '';
+            document.getElementById('med-dose').value = '';
+            document.getElementById('med-freq').value = '';
+            
+            renderMedicationList();
+            generateTreatmentText();
         }
 
-        document.getElementById('login-form').addEventListener('submit', (e) => {
+        function removeMedication(index) {
+            prescribedMeds.splice(index, 1);
+            renderMedicationList();
+            generateTreatmentText();
+        }
+
+        function renderMedicationList() {
+            const container = document.getElementById('medication-list');
+            container.innerHTML = '';
+            
+            prescribedMeds.forEach((med, index) => {
+                const el = document.createElement('div');
+                el.className = 'flex justify-between items-center bg-white p-2.5 rounded-xl border border-slate-200 text-xs shadow-sm';
+                el.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-brand-navy">${index + 1}. ${med.name} ${med.dose ? `(${med.dose})` : ''}</span>
+                        <span class="text-brand-teal font-medium">${med.freq}</span>
+                    </div>
+                    <button type="button" onclick="removeMedication(${index})" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded-lg transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function generateTreatmentText() {
+            let text = "";
+            prescribedMeds.forEach((med, index) => {
+                const doseStr = med.dose ? ` ${med.dose}` : "";
+                text += `${index + 1}. **T. ${med.name}${doseStr}** - ${med.freq}\n`;
+            });
+            
+            document.getElementById('in-treatment').value = text;
+            updatePreview();
+        }
+
+        // --- Session Save & Load Logic ---
+        function saveSessionData() {
+            const sessionData = {
+                assessmentDate: document.getElementById('in-assessment-date').value,
+                dob: document.getElementById('in-dob').value,
+                name: document.getElementById('in-name').value,
+                gender: document.getElementById('in-gender').value,
+                address: document.getElementById('in-address').value,
+                fontSize: document.getElementById('in-font-size').value,
+                symptoms: document.getElementById('in-symptoms').value,
+                evaluation: document.getElementById('in-evaluation').value,
+                history: document.getElementById('in-history').value,
+                diagnosis: document.getElementById('in-diagnosis').value,
+                treatment: document.getElementById('in-treatment').value,
+                followup: document.getElementById('in-followup').value,
+                prescribedMeds: prescribedMeds
+            };
+
+            const patientName = document.getElementById('in-name').value.trim() || 'Patient';
+            const dateVal = document.getElementById('in-assessment-date').value || 'Date';
+            const fileName = `${patientName}_${dateVal}.json`;
+            const content = JSON.stringify(sessionData, null, 2);
+
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(content);
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", fileName);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function loadSessionData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    
+                    if(data.assessmentDate !== undefined) document.getElementById('in-assessment-date').value = data.assessmentDate;
+                    if(data.dob !== undefined) document.getElementById('in-dob').value = data.dob;
+                    if(data.name !== undefined) document.getElementById('in-name').value = data.name;
+                    if(data.gender !== undefined) document.getElementById('in-gender').value = data.gender;
+                    if(data.address !== undefined) document.getElementById('in-address').value = data.address;
+                    if(data.fontSize !== undefined) document.getElementById('in-font-size').value = data.fontSize;
+                    if(data.symptoms !== undefined) document.getElementById('in-symptoms').value = data.symptoms;
+                    if(data.evaluation !== undefined) document.getElementById('in-evaluation').value = data.evaluation;
+                    if(data.history !== undefined) document.getElementById('in-history').value = data.history;
+                    if(data.diagnosis !== undefined) document.getElementById('in-diagnosis').value = data.diagnosis;
+                    if(data.treatment !== undefined) document.getElementById('in-treatment').value = data.treatment;
+                    if(data.followup !== undefined) document.getElementById('in-followup').value = data.followup;
+                    
+                    if(data.prescribedMeds !== undefined) {
+                        prescribedMeds = data.prescribedMeds;
+                        renderMedicationList();
+                    }
+
+                    updatePreview();
+                    alert("Session data loaded successfully!");
+                } catch (err) {
+                    console.error("Failed to parse JSON session file:", err);
+                    alert("Invalid session file format.");
+                }
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+
+        // Security Login
+        document.getElementById('login-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            if(document.getElementById('pin-input').value === "1234") {
+            const pin = document.getElementById('pin-input').value;
+            if(pin === '0000') {
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('app-screen').classList.remove('hidden');
+                setDefaultDates();
             } else {
-                alert("Incorrect PIN. Please use 1234.");
-                document.getElementById('pin-input').value = "";
+                alert('Invalid PIN.');
+                document.getElementById('pin-input').value = '';
             }
         });
-        
-        const inputs = ['name', 'medicines', 'complaints', 'diagnosis', 'advice'];
-        inputs.forEach(id => {
-            document.getElementById(`in-${id}`).addEventListener('input', (e) => {
-                const val = e.target.value;
-                document.getElementById(`out-${id}`).innerText = val;
-                
-                if (['complaints', 'diagnosis', 'advice'].includes(id)) {
-                    const container = document.getElementById(`${id}-container`);
-                    if (val.trim()) { container.classList.remove('hidden'); } else { container.classList.add('hidden'); }
-                }
-                
-                if (id === 'complaints' || id === 'diagnosis') {
-                    const compVal = document.getElementById('in-complaints').value.trim();
-                    const diagVal = document.getElementById('in-diagnosis').value.trim();
-                    const clinicalGrid = document.getElementById('clinical-container');
-                    if (compVal || diagVal) { clinicalGrid.classList.remove('hidden'); } else { clinicalGrid.classList.add('hidden'); }
-                }
 
-                if (id === 'name') updateQRCode();
-            });
-        });
-
-        document.getElementById('in-age').addEventListener('input', updateAgeSex);
-        document.getElementById('in-sex').addEventListener('change', updateAgeSex);
-        function updateAgeSex() {
-            document.getElementById('out-agesex').innerText = `${document.getElementById('in-age').value || '___'} / ${document.getElementById('in-sex').value || '___'}`;
+        function setDefaultDates() {
+            const todayDate = new Date();
+            const today = todayDate.toISOString().split('T')[0];
+            document.getElementById('in-assessment-date').value = today;
+            updatePreview();
         }
-        
-        function generateImage() {
-            const element = document.getElementById('prescription-preview');
-            const btn = document.getElementById('export-btn');
-            const originalText = btn.innerText;
-            btn.innerText = "Generating High-Res Image..."; 
+
+        function formatText(text) {
+            if (!text) return '';
+            let formatted = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            return formatted.replace(/\n/g, '<br>');
+        }
+
+        function handleImageUpload(inputId, outputId) {
+            const input = document.getElementById(inputId);
+            const img = document.getElementById(outputId);
             
-            html2canvas(element, {
-                scale: 5, 
-                useCORS: true,
-                windowWidth: 1200, 
-                onclone: function (clonedDoc) {
-                    const clonedElement = clonedDoc.getElementById('prescription-preview');
-                    clonedElement.style.transform = 'none';
-                    clonedElement.style.width = '794px'; 
-                    clonedElement.style.minHeight = '1123px';
-                    clonedElement.style.maxWidth = 'none';
-                    clonedElement.classList.remove('scale-[0.45]', 'sm:scale-[0.65]', 'lg:scale-100');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    img.style.display = 'block';
+                    
+                    // Add slight random offset to signature to look natural
+                    const rotation = (Math.random() * 6 - 3).toFixed(1);
+                    const shiftX = (Math.random() * 6 - 3).toFixed(1);
+                    const shiftY = (Math.random() * 6 - 3).toFixed(1);
+                    img.style.transform = `rotate(${rotation}deg) translate(${shiftX}px, ${shiftY}px)`;
                 }
-            }).then(canvas => {
-                const imgData = canvas.toDataURL('image/jpeg', 1.0); 
-                const link = document.createElement('a');
-                const patientName = document.getElementById('in-name').value.trim() || 'Patient';
-                link.download = `Rx_${patientName}.jpg`;
-                link.href = imgData;
-                link.click();
-                btn.innerText = originalText;
-            }).catch(err => {
-                console.error("Image generation failed:", err);
-                btn.innerText = "Error - Try Again";
-                setTimeout(() => { btn.innerText = originalText; }, 3000);
-            });
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        document.getElementById('in-signature-image').addEventListener('change', () => handleImageUpload('in-signature-image', 'out-signature-img'));
+
+        function updatePreview() {
+            const formatDate = (dateStr) => {
+                if(!dateStr) return '';
+                const d = new Date(dateStr);
+                return `${d.getDate().toString().padStart(2, '0')}-${(d.getMonth()+1).toString().padStart(2, '0')}-${d.getFullYear()}`;
+            };
+
+            const baseDateVal = document.getElementById('in-assessment-date').value;
+            document.getElementById('out-assessment-date').innerText = formatDate(baseDateVal);
+            document.getElementById('out-name').innerText = document.getElementById('in-name').value;
+            document.getElementById('out-gender').innerText = document.getElementById('in-gender').value;
+            document.getElementById('out-dob').innerText = document.getElementById('in-dob').value;
+            document.getElementById('out-address').innerText = document.getElementById('in-address').value;
+
+            const symptoms = document.getElementById('in-symptoms').value;
+            const evaluation = document.getElementById('in-evaluation').value;
+            const history = document.getElementById('in-history').value;
+            const diagnosis = document.getElementById('in-diagnosis').value;
+            const treatment = document.getElementById('in-treatment').value;
+            const fontSize = document.getElementById('in-font-size').value;
+
+            // Follow Up Auto Date Calculation
+            const followupEl = document.getElementById('in-followup');
+            const selectedOption = followupEl.options[followupEl.selectedIndex];
+            let followupText = followupEl.value;
+            
+            if (followupText && followupText !== "Review SOS / When Required" && baseDateVal) {
+                const addDays = parseInt(selectedOption.getAttribute('data-days')) || 0;
+                const addMonths = parseInt(selectedOption.getAttribute('data-months')) || 0;
+                
+                const followDate = new Date(baseDateVal);
+                if (addDays > 0) followDate.setDate(followDate.getDate() + addDays);
+                if (addMonths > 0) followDate.setMonth(followDate.getMonth() + addMonths);
+                
+                const formattedFollowDate = `${followDate.getDate().toString().padStart(2, '0')}-${(followDate.getMonth()+1).toString().padStart(2, '0')}-${followDate.getFullYear()}`;
+                followupText = `${followupText} (${formattedFollowDate})`;
+            }
+
+            // Apply text formatting and dynamic font size
+            const sympOut = document.getElementById('out-symptoms');
+            sympOut.innerHTML = formatText(symptoms);
+            sympOut.style.fontSize = fontSize;
+            document.getElementById('symptoms-container').style.display = symptoms ? 'block' : 'none';
+
+            const evalOut = document.getElementById('out-evaluation');
+            evalOut.innerHTML = formatText(evaluation);
+            evalOut.style.fontSize = fontSize;
+            document.getElementById('evaluation-container').style.display = evaluation ? 'block' : 'none';
+
+            const histOut = document.getElementById('out-history');
+            histOut.innerHTML = formatText(history);
+            histOut.style.fontSize = fontSize;
+            document.getElementById('history-container').style.display = history ? 'block' : 'none';
+
+            const diagOut = document.getElementById('out-diagnosis');
+            diagOut.innerHTML = formatText(diagnosis);
+            diagOut.style.fontSize = fontSize;
+            document.getElementById('diagnosis-container').style.display = diagnosis ? 'block' : 'none';
+
+            const treatOut = document.getElementById('out-treatment');
+            treatOut.innerHTML = formatText(treatment);
+            treatOut.style.fontSize = fontSize;
+            
+            const followupOut = document.getElementById('out-followup');
+            if (followupText) {
+                followupOut.innerText = followupText;
+                followupOut.style.display = 'block';
+                followupOut.style.fontSize = fontSize;
+            } else {
+                followupOut.style.display = 'none';
+            }
+            
+            document.getElementById('treatment-container').style.display = (treatment || followupText) ? 'block' : 'none';
+        }
+
+        const inputs = document.querySelectorAll('input[type="text"], input[type="date"], select, textarea');
+        inputs.forEach(input => {
+            if(input.id !== 'in-treatment' && input.id !== 'in-font-size' && input.id !== 'med-name' && input.id !== 'med-dose' && input.id !== 'med-freq') {
+                input.addEventListener('input', updatePreview);
+                input.addEventListener('change', updatePreview);
+            }
+        });
+        document.getElementById('in-treatment').addEventListener('input', updatePreview);
+
+        // Generate PDF
+        function generatePDF() {
+            const btn = document.getElementById('export-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Rendering Demo PDF...';
+            btn.classList.add('opacity-75', 'cursor-wait');
+
+            const container = document.getElementById('prescription-preview');
+            const currentTransform = container.style.transform;
+            container.classList.remove('scale-[0.48]', 'sm:scale-[0.7]', 'lg:scale-100');
+            container.style.transform = 'scale(1)';
+
+            setTimeout(() => {
+                html2canvas(container, {
+                    scale: 3, 
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    const { jsPDF } = window.jspdf;
+                    
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+
+                    pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+                    
+                    const patientName = document.getElementById('in-name').value || 'Patient';
+                    const dateVal = document.getElementById('in-assessment-date').value || 'Date';
+                    const fileName = `Prescription_${patientName}_${dateVal}.pdf`;
+
+                    pdf.save(fileName);
+
+                    container.classList.add('scale-[0.48]', 'sm:scale-[0.7]', 'lg:scale-100');
+                    container.style.transform = currentTransform;
+                    
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-75', 'cursor-wait');
+                }).catch(err => {
+                    console.error("PDF generation failed:", err);
+                    alert("There was an error generating the PDF.");
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('opacity-75', 'cursor-wait');
+                    
+                    container.classList.add('scale-[0.48]', 'sm:scale-[0.7]', 'lg:scale-100');
+                    container.style.transform = currentTransform;
+                });
+            }, 500); 
         }
     </script>
 </body>
